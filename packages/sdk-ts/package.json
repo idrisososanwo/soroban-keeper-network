@@ -1,0 +1,31 @@
+{
+  "name": "@soroban-keeper-network/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Soroban Keeper Network contract",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/test/*.test.js"
+  },
+  "keywords": [
+    "soroban",
+    "stellar",
+    "keeper",
+    "sdk",
+    "automation",
+    "defi"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@stellar/stellar-sdk": "^16.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

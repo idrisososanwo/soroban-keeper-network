@@ -402,6 +402,31 @@ jobs:
         run: npm run lint
 
   # ───────────────────────────────────────────────────────────────────────────
+  # REQUIRED — TypeScript SDK build & test
+  # ───────────────────────────────────────────────────────────────────────────
+  sdk-ts:
+    name: TS SDK (required)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sdk-ts
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build SDK
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+  # ───────────────────────────────────────────────────────────────────────────
   # Aggregate gate. Branch protection should require only this single check;
   # it passes when all REQUIRED jobs pass and ignores advisory outcomes.
   # ───────────────────────────────────────────────────────────────────────────
@@ -409,12 +434,12 @@ jobs:
     name: CI required checks
     runs-on: ubuntu-latest
     if: always()
-    needs: [format, test, build-wasm, bot]
+    needs: [format, test, build-wasm, bot, sdk-ts]
     steps:
       - name: Verify required jobs succeeded
         run: |
           results='${{ join(needs.*.result, ' ') }}'
-          echo "Required job results (format, test, build-wasm, bot): $results"
+          echo "Required job results (format, test, build-wasm, bot, sdk-ts): $results"
           for r in $results; do
             if [ "$r" != "success" ]; then
               echo "::error::A required CI job did not succeed."
@@ -422,3 +447,4 @@ jobs:
             fi
           done
           echo "All required checks passed."
+
