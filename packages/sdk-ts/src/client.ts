@@ -32,10 +32,12 @@ import {
   TransferAdminParams,
   UpgradeParams,
   SweepFeesParams,
+  UpdateVerifierParams,
   InitializeParams,
 } from "./types";
 import { validateContractId, validateAddress, validateSecretKey, encodeScVal } from "./utils";
 import { buildTransaction, previewTransaction, normalizeMethodName } from "./transactionBuilder";
+
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -331,7 +333,15 @@ export class KeeperRegistryClient {
     return this.executeWithSecretKey("sweepFees", params, options);
   }
 
+  public async updateVerifier(
+    params: UpdateVerifierParams,
+    options?: BuildTransactionOptions
+  ): Promise<TransactionResult> {
+    return this.executeWithSecretKey("updateVerifier", params, options);
+  }
+
   public async initialize(
+
     params: InitializeParams,
     options?: BuildTransactionOptions
   ): Promise<TransactionResult> {

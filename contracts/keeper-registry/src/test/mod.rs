@@ -22,4 +22,6 @@ mod register;
 mod resource_report;
 mod reward_split;
 mod ttl;
+mod verifier;
 mod withdraw;
+

@@ -221,3 +221,10 @@ export interface SweepFeesParams {
   treasury: string;
   amount: bigint | number | string;
 }
+
+export interface UpdateVerifierParams {
+  owner: string;
+  taskId: bigint | number | string;
+  verifier?: string;
+}
+

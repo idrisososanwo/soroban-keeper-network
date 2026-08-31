@@ -35,6 +35,7 @@ export function normalizeMethodName(methodName: string): string {
     transferAdmin: "transfer_admin",
     upgrade: "upgrade",
     sweepFees: "sweep_fees",
+    updateVerifier: "update_verifier",
     initialize: "initialize",
   };
   return mapping[methodName] || methodName;
@@ -58,8 +59,10 @@ export function getRequiredSigners(methodName: string, params: Record<string, an
     case "increase_reward":
     case "extend_deadline":
     case "cancel_task":
+    case "update_verifier":
       if (params.owner) signers.push(params.owner);
       break;
+
 
     case "claim_task":
     case "execute_task":
@@ -234,6 +237,14 @@ export function encodeMethodArgs(methodName: string, params: Record<string, any>
         encodeScVal(params.treasury, "address"),
         encodeScVal(params.amount, "i128"),
       ];
+
+    case "update_verifier":
+      return [
+        encodeScVal(params.owner, "address"),
+        encodeScVal(params.taskId ?? params.task_id, "u64"),
+        encodeScVal(params.verifier, "opt_address"),
+      ];
+
 
     default:
       throw new Error(`Unsupported or unknown contract method: "${methodName}".`);
