@@ -11,8 +11,9 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 import { KeeperRegistryClient } from "../src/client";
-import { getRequiredSigners, buildTransaction } from "../src/transactionBuilder";
+import { getRequiredSigners, buildTransaction, previewTransaction } from "../src/transactionBuilder";
 import { TaskType } from "../src/types";
+import { KeeperErrorCode } from "../src/errors";
 
 const adminKp = Keypair.random();
 const newAdminKp = Keypair.random();
@@ -21,12 +22,13 @@ const keeperKp = Keypair.random();
 const dummyContractId = "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4";
 const networkPassphrase = Networks.TESTNET;
 
-function createMockServer() {
+function createMockServer(simResponseOverride?: any) {
   const server = {
     getAccount: async (publicKey: string) => {
       return new Account(publicKey, "100");
     },
     simulateTransaction: async (tx: any) => {
+      if (simResponseOverride) return simResponseOverride;
       return {
         id: "1",
         latestLedger: 100,
@@ -184,6 +186,65 @@ test("simulates full unsigned-build, external-sign (wallet stand-in), submit rou
 
   assert.equal(result.status, "SUCCESS");
   assert.ok(result.hash.length > 0);
+});
+
+test("previewTransaction succeeds without any signer present and extracts resource costs", async () => {
+  const mockSorobanData = new SorobanDataBuilder().setResources(500, 100, 200).build();
+  const mockServer = createMockServer({
+    id: "1",
+    latestLedger: 100,
+    transactionData: mockSorobanData.toXDR("base64"),
+    minResourceFee: "1500",
+    results: [
+      {
+        auth: [],
+        xdr: xdr.ScVal.scvU64(new xdr.Uint64(42n)).toXDR("base64"),
+      },
+    ],
+  });
+
+  const client = new KeeperRegistryClient({
+    contractId: dummyContractId,
+    rpcUrl: "https://soroban-testnet.stellar.org",
+    networkPassphrase,
+  });
+  (client as any).server = mockServer;
+
+  // Preview call without sourcePublicKey or signer passed
+  const preview = await client.previewTransaction("claimTask", {
+    keeper: keeperKp.publicKey(),
+    taskId: 1n,
+  });
+
+  assert.equal(preview.success, true);
+  assert.equal(preview.returnValue, 42n);
+  assert.equal(preview.resourceCost.minResourceFee, 1500n);
+  assert.equal(preview.resourceCost.cpuInstructions, 500);
+});
+
+test("previewTransaction handles failed simulation and surfaces typed KeeperErrorCode", async () => {
+  const mockServer = createMockServer({
+    id: "1",
+    latestLedger: 100,
+    minResourceFee: "100",
+    error: "HostError: Error(Contract, #4)", // TaskNotFound (4)
+  });
+
+  const client = new KeeperRegistryClient({
+    contractId: dummyContractId,
+    rpcUrl: "https://soroban-testnet.stellar.org",
+    networkPassphrase,
+  });
+  (client as any).server = mockServer;
+
+  const preview = await client.previewTransaction("claimTask", {
+    keeper: keeperKp.publicKey(),
+    taskId: 999n,
+  });
+
+  assert.equal(preview.success, false);
+  assert.equal(preview.error, "HostError: Error(Contract, #4)");
+  assert.equal(preview.errorCode, KeeperErrorCode.TaskNotFound);
 });
 
 test("KeeperRegistryClient validates inputs and client-side error checks", async () => {

@@ -2,6 +2,8 @@
  * Soroban Keeper Network — TypeScript SDK Types
  */
 
+import { KeeperErrorCode } from "./errors";
+
 export enum TaskType {
   Liquidation = 0,
   OraclePricePush = 1,
@@ -75,6 +77,55 @@ export interface TransactionResult {
   status: "SUCCESS" | "FAILED" | string;
   returnValue?: any;
   rawResponse?: any;
+}
+
+export interface ResourceCost {
+  /**
+   * Estimated CPU instructions consumed by simulation.
+   */
+  cpuInstructions?: number;
+
+  /**
+   * Estimated RAM/memory bytes consumed by simulation.
+   */
+  memoryBytes?: number;
+
+  /**
+   * Minimum network resource fee required (in stroops).
+   */
+  minResourceFee: bigint;
+}
+
+export interface TransactionPreviewResult {
+  /**
+   * Whether the simulated transaction succeeded without contract or host errors.
+   */
+  success: boolean;
+
+  /**
+   * Decoded native return value if the contract call succeeded.
+   */
+  returnValue?: any;
+
+  /**
+   * Estimated resource cost extracted from simulation data.
+   */
+  resourceCost: ResourceCost;
+
+  /**
+   * Raw error string if simulation failed.
+   */
+  error?: string;
+
+  /**
+   * Decoded typed KeeperErrorCode if the failure was a contract business error.
+   */
+  errorCode?: KeeperErrorCode;
+
+  /**
+   * Raw simulation response for advanced inspection.
+   */
+  rawSimulation?: any;
 }
 
 // Method-specific parameter interfaces for type safety

@@ -12,6 +12,7 @@ import {
   BuildTransactionOptions,
   BuiltTransaction,
   TransactionResult,
+  TransactionPreviewResult,
   Task,
   TaskType,
   TaskStatus,
@@ -34,7 +35,7 @@ import {
   InitializeParams,
 } from "./types";
 import { validateContractId, validateAddress, validateSecretKey, encodeScVal } from "./utils";
-import { buildTransaction, normalizeMethodName } from "./transactionBuilder";
+import { buildTransaction, previewTransaction, normalizeMethodName } from "./transactionBuilder";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -81,6 +82,29 @@ export class KeeperRegistryClient {
     options?: BuildTransactionOptions
   ): Promise<BuiltTransaction> {
     return buildTransaction(
+      this.server,
+      this.contractId,
+      this.networkPassphrase,
+      methodName,
+      params,
+      options
+    );
+  }
+
+  /**
+   * Lower-level method: Previews a transaction simulation before submission without requiring any signers or private keys.
+   * Returns resource costs (minResourceFee, cpuInstructions, memoryBytes) and simulated return value (or decoded typed KeeperErrorCode).
+   *
+   * @param methodName Method name to preview (e.g. "registerTask", "claimTask")
+   * @param params Method parameters
+   * @param options Preview options (sourcePublicKey, fee, timeoutSeconds)
+   */
+  public async previewTransaction(
+    methodName: string,
+    params: Record<string, any>,
+    options?: BuildTransactionOptions
+  ): Promise<TransactionPreviewResult> {
+    return previewTransaction(
       this.server,
       this.contractId,
       this.networkPassphrase,

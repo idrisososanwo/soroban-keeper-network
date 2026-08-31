@@ -1,5 +1,5 @@
 import { rpc, xdr } from "@stellar/stellar-sdk";
-import { BuiltTransaction, BuildTransactionOptions } from "./types";
+import { BuiltTransaction, BuildTransactionOptions, ResourceCost, TransactionPreviewResult } from "./types";
 /**
  * Normalizes camelCase method names to contract snake_case function names.
  */
@@ -13,17 +13,16 @@ export declare function getRequiredSigners(methodName: string, params: Record<st
  */
 export declare function encodeMethodArgs(methodName: string, params: Record<string, any>): xdr.ScVal[];
 /**
+ * Extracts resource cost metrics (minResourceFee, cpuInstructions, memoryBytes) from simulation response.
+ */
+export declare function extractResourceCost(simResponse: any): ResourceCost;
+/**
  * Builds an unsigned Soroban transaction for any mutating contract method.
- *
- * Runs simulation via SorobanRpc to populate footers and authorization entries,
- * then returns the unsigned XDR string along with the required signers metadata.
- *
- * @param server SorobanRpc Server instance
- * @param contractId Contract ID string
- * @param networkPassphrase Network passphrase
- * @param methodName Method name to invoke (e.g. "registerTask", "transferAdmin")
- * @param params Parameters required by the method
- * @param options Building options (sourcePublicKey, fee, timeoutSeconds)
  */
 export declare function buildTransaction(server: rpc.Server, contractId: string, networkPassphrase: string, methodName: string, params: Record<string, any>, options?: BuildTransactionOptions): Promise<BuiltTransaction>;
+/**
+ * Previews a transaction simulation without requiring any signers or private keys.
+ * Returns estimated resource costs and expected return value (or decoded typed KeeperErrorCode if failed).
+ */
+export declare function previewTransaction(server: rpc.Server, contractId: string, networkPassphrase: string, methodName: string, params: Record<string, any>, options?: BuildTransactionOptions): Promise<TransactionPreviewResult>;
 //# sourceMappingURL=transactionBuilder.d.ts.map

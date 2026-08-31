@@ -3,9 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizeMethodName = normalizeMethodName;
 exports.getRequiredSigners = getRequiredSigners;
 exports.encodeMethodArgs = encodeMethodArgs;
+exports.extractResourceCost = extractResourceCost;
 exports.buildTransaction = buildTransaction;
+exports.previewTransaction = previewTransaction;
 const stellar_sdk_1 = require("@stellar/stellar-sdk");
 const utils_1 = require("./utils");
+const errors_1 = require("./errors");
+const DUMMY_SOURCE_ACCOUNT = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
 /**
  * Normalizes camelCase method names to contract snake_case function names.
  */
@@ -214,17 +218,45 @@ function encodeMethodArgs(methodName, params) {
     }
 }
 /**
+ * Extracts resource cost metrics (minResourceFee, cpuInstructions, memoryBytes) from simulation response.
+ */
+function extractResourceCost(simResponse) {
+    let minResourceFee = 0n;
+    if (simResponse?.minResourceFee) {
+        minResourceFee = BigInt(simResponse.minResourceFee);
+    }
+    let cpuInstructions;
+    let memoryBytes;
+    try {
+        let txData = simResponse?.transactionData;
+        if (typeof txData === "string") {
+            txData = stellar_sdk_1.xdr.SorobanTransactionData.fromXDR(txData, "base64");
+        }
+        if (txData && typeof txData.resources === "function") {
+            const res = txData.resources();
+            if (res) {
+                if (typeof res.instructions === "function") {
+                    cpuInstructions = Number(res.instructions());
+                }
+                const readB = typeof res.readBytes === "function" ? Number(res.readBytes()) : 0;
+                const writeB = typeof res.writeBytes === "function" ? Number(res.writeBytes()) : 0;
+                if (readB || writeB) {
+                    memoryBytes = readB + writeB;
+                }
+            }
+        }
+    }
+    catch {
+        // If parsing resources fails, keep minResourceFee and undefined metrics
+    }
+    return {
+        cpuInstructions,
+        memoryBytes,
+        minResourceFee,
+    };
+}
+/**
  * Builds an unsigned Soroban transaction for any mutating contract method.
- *
- * Runs simulation via SorobanRpc to populate footers and authorization entries,
- * then returns the unsigned XDR string along with the required signers metadata.
- *
- * @param server SorobanRpc Server instance
- * @param contractId Contract ID string
- * @param networkPassphrase Network passphrase
- * @param methodName Method name to invoke (e.g. "registerTask", "transferAdmin")
- * @param params Parameters required by the method
- * @param options Building options (sourcePublicKey, fee, timeoutSeconds)
  */
 async function buildTransaction(server, contractId, networkPassphrase, methodName, params, options = {}) {
     (0, utils_1.validateContractId)(contractId);
@@ -255,6 +287,60 @@ async function buildTransaction(server, contractId, networkPassphrase, methodNam
     return {
         unsignedXdr: assembledTx.toXDR(),
         signers,
+    };
+}
+/**
+ * Previews a transaction simulation without requiring any signers or private keys.
+ * Returns estimated resource costs and expected return value (or decoded typed KeeperErrorCode if failed).
+ */
+async function previewTransaction(server, contractId, networkPassphrase, methodName, params, options = {}) {
+    (0, utils_1.validateContractId)(contractId);
+    const signers = getRequiredSigners(methodName, params);
+    const sourcePublicKey = options.sourcePublicKey || signers[0] || params.sourcePublicKey || DUMMY_SOURCE_ACCOUNT;
+    const snakeMethod = normalizeMethodName(methodName);
+    const scArgs = encodeMethodArgs(methodName, params);
+    const account = new stellar_sdk_1.Account(sourcePublicKey, "0");
+    const contract = new stellar_sdk_1.Contract(contractId);
+    const fee = options.fee ? String(options.fee) : stellar_sdk_1.BASE_FEE;
+    const timeoutSeconds = options.timeoutSeconds ?? 30;
+    const rawTx = new stellar_sdk_1.TransactionBuilder(account, {
+        fee,
+        networkPassphrase,
+    })
+        .addOperation(contract.call(snakeMethod, ...scArgs))
+        .setTimeout(timeoutSeconds)
+        .build();
+    const simResponse = await server.simulateTransaction(rawTx);
+    const resourceCost = extractResourceCost(simResponse);
+    if (stellar_sdk_1.rpc.Api.isSimulationError(simResponse)) {
+        const errorMsg = simResponse.error || "Simulation failed";
+        const errorCode = (0, errors_1.decodeKeeperError)(errorMsg);
+        return {
+            success: false,
+            error: errorMsg,
+            errorCode,
+            resourceCost,
+            rawSimulation: simResponse,
+        };
+    }
+    let returnValue = undefined;
+    if (simResponse.result) {
+        returnValue = simResponse.result.retval
+            ? (0, stellar_sdk_1.scValToNative)(simResponse.result.retval)
+            : undefined;
+    }
+    else if (Array.isArray(simResponse.results) && simResponse.results.length > 0) {
+        const res = simResponse.results[0];
+        if (res.xdr) {
+            const scVal = stellar_sdk_1.xdr.ScVal.fromXDR(res.xdr, "base64");
+            returnValue = (0, stellar_sdk_1.scValToNative)(scVal);
+        }
+    }
+    return {
+        success: true,
+        returnValue,
+        resourceCost,
+        rawSimulation: simResponse,
     };
 }
 //# sourceMappingURL=transactionBuilder.js.map
