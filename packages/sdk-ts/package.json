@@ -2,9 +2,19 @@
   "name": "@soroban-keeper-network/sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for the Soroban Keeper Network contract",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "module": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./react": {
+      "types": "./dist/src/react/index.d.ts",
+      "default": "./dist/src/react/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "test": "node --test dist/test/*.test.js"
@@ -15,14 +25,27 @@
     "keeper",
     "sdk",
     "automation",
+    "react",
     "defi"
   ],
   "license": "Apache-2.0",
   "dependencies": {
     "@stellar/stellar-sdk": "^16.2.0"
   },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "typescript": "^5.3.3"
   },
   "engines": {
