@@ -1,7 +1,9 @@
-/**
- * Soroban Keeper Network — TypeScript SDK Types
- */
+// Typed mirrors of the keeper-registry contract's on-chain types
+// (contracts/keeper-registry/src/types.ts and errors.rs). Field names,
+// discriminants, and semantics must stay in sync with the contract — see
+// CONVENTIONS.md for the numeric/timestamp representation this SDK uses.
 
+/** Mirrors `contracts/keeper-registry/src/types.rs::TaskType`. */
 export enum TaskType {
   Liquidation = 0,
   OraclePricePush = 1,
@@ -11,162 +13,55 @@ export enum TaskType {
   Custom = 5,
 }
 
+/** Mirrors `contracts/keeper-registry/src/types.rs::TaskStatus`. */
 export enum TaskStatus {
   Pending = 0,
   Claimed = 1,
   Executed = 2,
-  Expired = 3,
-  Cancelled = 4,
+  Cancelled = 3,
+  Expired = 4,
 }
 
+/**
+ * Mirrors `contracts/keeper-registry/src/types.rs::Task`.
+ *
+ * Numeric convention (CONVENTIONS.md): `reward` is a `bigint` (an `i128` can
+ * exceed `Number.MAX_SAFE_INTEGER`); `taskId`, `deadline`, and `claimLedger`
+ * stay `number` — a `u64` task id or ledger sequence is astronomically far
+ * from overflowing a JS safe integer in this contract's lifetime, and a
+ * `number` is far more ergonomic for array indexing, comparisons, and
+ * `Date` conversion than a `bigint` would be.
+ */
 export interface Task {
-  id: bigint;
   owner: string;
   taskType: TaskType;
-  calldata: Buffer;
+  calldata: Uint8Array;
   reward: bigint;
-  deadline: bigint;
+  /** Unix timestamp, seconds. */
+  deadline: number;
   ttlLedgers: number;
-  lockLedgers: number;
-  verifier?: string;
   status: TaskStatus;
-  claimedBy?: string;
-  claimDeadline?: bigint;
+  claimer: string | undefined;
+  claimLedger: number | undefined;
+  lockLedgers: number;
 }
 
-export interface BatchTaskParams {
-  taskType: TaskType | number;
-  calldata: Buffer | Uint8Array | string;
-  reward: bigint | number | string;
-  deadline: bigint | number | string;
-  ttlLedgers: number;
-  lockLedgers: number;
-  verifier?: string;
-}
+/** Which network preset a client is configured against. */
+export type NetworkPreset = "testnet" | "futurenet" | "mainnet";
 
 export interface KeeperRegistryClientConfig {
   contractId: string;
   rpcUrl: string;
   networkPassphrase: string;
-  secretKey?: string;
-}
-
-export interface BuildTransactionOptions {
-  sourcePublicKey?: string;
-  fee?: number | string;
-  timeoutSeconds?: number;
-}
-
-export interface BuiltTransaction {
   /**
-   * The unsigned transaction envelope XDR string in base64 format.
+   * A funded account's public key, used as the simulation source for
+   * read-only view calls (`getTask`, etc.) that don't otherwise take one
+   * explicitly. Soroban simulation requires *some* existing source account
+   * even for a call that reads and spends nothing — see
+   * `ContractInvoker.read`'s doc comment. Any funded account works; it is
+   * never signed with or spent from. Required for the React hooks in this
+   * SDK (`useTask`, `useTaskEvents`), which have no natural "current caller"
+   * to borrow a source account from.
    */
-  unsignedXdr: string;
-
-  /**
-   * List of Stellar account public keys required to sign this transaction.
-   * For dual-auth operations like `transferAdmin`, this will contain both accounts.
-   */
-  signers: string[];
-}
-
-export interface TransactionResult {
-  hash: string;
-  status: "SUCCESS" | "FAILED" | string;
-  returnValue?: any;
-  rawResponse?: any;
-}
-
-// Method-specific parameter interfaces for type safety
-export interface InitializeParams {
-  admin: string;
-  rewardToken: string;
-  feeBps: number;
-}
-
-export interface RegisterTaskParams {
-  owner: string;
-  taskType: TaskType | number;
-  calldata: Buffer | Uint8Array | string;
-  reward: bigint | number | string;
-  deadline: bigint | number | string;
-  ttlLedgers: number;
-  lockLedgers: number;
-  verifier?: string;
-}
-
-export interface BatchRegisterTasksParams {
-  owner: string;
-  tasks: BatchTaskParams[];
-  maxTotalReward: bigint | number | string;
-}
-
-export interface IncreaseRewardParams {
-  owner: string;
-  taskId: bigint | number | string;
-  additional: bigint | number | string;
-}
-
-export interface ExtendDeadlineParams {
-  owner: string;
-  taskId: bigint | number | string;
-  additionalLedgers: bigint | number | string;
-}
-
-export interface ClaimTaskParams {
-  keeper: string;
-  taskId: bigint | number | string;
-}
-
-export interface ExecuteTaskParams {
-  keeper: string;
-  taskId: bigint | number | string;
-  proof: Buffer | Uint8Array | string;
-}
-
-export interface CancelTaskParams {
-  owner: string;
-  taskId: bigint | number | string;
-}
-
-export interface ExpireTaskParams {
-  taskId: bigint | number | string;
-}
-
-export interface WithdrawRewardsParams {
-  keeper: string;
-}
-
-export interface PauseParams {
-  admin: string;
-}
-
-export interface UnpauseParams {
-  admin: string;
-}
-
-export interface SetFeeBpsParams {
-  admin: string;
-  newBps: number;
-}
-
-export interface SetMinRewardParams {
-  admin: string;
-  minReward: bigint | number | string;
-}
-
-export interface TransferAdminParams {
-  admin: string;
-  newAdmin: string;
-}
-
-export interface UpgradeParams {
-  admin: string;
-  newWasmHash: Buffer | Uint8Array | string;
-}
-
-export interface SweepFeesParams {
-  admin: string;
-  treasury: string;
-  amount: bigint | number | string;
+  readOnlySourceAccount?: string;
 }
