@@ -43,6 +43,17 @@ class KeeperRegistryClient {
         return (0, transactionBuilder_1.buildTransaction)(this.server, this.contractId, this.networkPassphrase, methodName, params, options);
     }
     /**
+     * Lower-level method: Previews a transaction simulation before submission without requiring any signers or private keys.
+     * Returns resource costs (minResourceFee, cpuInstructions, memoryBytes) and simulated return value (or decoded typed KeeperErrorCode).
+     *
+     * @param methodName Method name to preview (e.g. "registerTask", "claimTask")
+     * @param params Method parameters
+     * @param options Preview options (sourcePublicKey, fee, timeoutSeconds)
+     */
+    async previewTransaction(methodName, params, options) {
+        return (0, transactionBuilder_1.previewTransaction)(this.server, this.contractId, this.networkPassphrase, methodName, params, options);
+    }
+    /**
      * Lower-level method: Submits a signed transaction XDR base64 string to the Soroban RPC server
      * and polls until confirmation.
      *
@@ -174,6 +185,9 @@ class KeeperRegistryClient {
             throw new Error("Sweep fee amount must be greater than zero.");
         }
         return this.executeWithSecretKey("sweepFees", params, options);
+    }
+    async updateVerifier(params, options) {
+        return this.executeWithSecretKey("updateVerifier", params, options);
     }
     async initialize(params, options) {
         return this.executeWithSecretKey("initialize", params, options);
