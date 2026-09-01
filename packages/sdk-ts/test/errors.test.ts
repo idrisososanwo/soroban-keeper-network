@@ -1,23 +1,72 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { KeeperErrorCode, decodeKeeperError } from "../src/errors";
+import { describe, it } from "node:test";
+import assert from "node:assert";
+import {
+  KeeperErrorCode,
+  decodeKeeperError,
+  isKeeperError,
+} from "../src/errors.js";
 
-test("decodeKeeperError decodes contract error strings accurately", () => {
-  assert.equal(decodeKeeperError("HostError: Error(Contract, #4)"), KeeperErrorCode.TaskNotFound);
-  assert.equal(decodeKeeperError("Error(Contract, #1)"), KeeperErrorCode.AlreadyInitialized);
-  assert.equal(decodeKeeperError("ContractError(23)"), KeeperErrorCode.BatchRewardCeilingExceeded);
-  assert.equal(decodeKeeperError("Error(Contract, #0x17)"), KeeperErrorCode.BatchRewardCeilingExceeded);
+describe("decodeKeeperError", () => {
+  it("decodes a known contract error from a real-shaped Soroban error message", () => {
+    const error = new Error(
+      "Simulation failed: HostError: Error(Contract, #4)\nEvent log ...",
+    );
+    const decoded = decodeKeeperError(error);
+    assert.deepStrictEqual(decoded, {
+      code: 4,
+      name: "TaskNotFound",
+    });
+  });
 
-  // Object error structure
-  assert.equal(decodeKeeperError({ error: "Error(Contract, #15)" }), KeeperErrorCode.NotInitialized);
-  assert.equal(decodeKeeperError(new Error("HostError: Error(Contract, #3)")), KeeperErrorCode.ContractPaused);
+  it("decodes every named KeeperErrorCode variant correctly", () => {
+    for (const [name, code] of Object.entries(KeeperErrorCode)) {
+      if (typeof code !== "number") continue;
+      const error = new Error(`Error(Contract, #${code})`);
+      const decoded = decodeKeeperError(error);
+      assert.strictEqual(decoded?.code, code);
+      assert.strictEqual(decoded?.name, name);
+    }
+  });
+
+  it("returns code with name undefined for a numeric code outside the known enum", () => {
+    const error = new Error("Error(Contract, #9999)");
+    const decoded = decodeKeeperError(error);
+    assert.deepStrictEqual(decoded, { code: 9999, name: undefined });
+  });
+
+  it("returns undefined when the message has no Error(Contract, #n) pattern at all", () => {
+    const error = new Error("Send failed: network timeout");
+    assert.strictEqual(decodeKeeperError(error), undefined);
+  });
+
+  it("returns undefined for a non-Error thrown value with no matching pattern", () => {
+    assert.strictEqual(decodeKeeperError("plain string, no pattern"), undefined);
+  });
+
+  it("still matches when the thrown value is a string containing the pattern", () => {
+    const decoded = decodeKeeperError("prefix Error(Contract, #2) suffix");
+    assert.deepStrictEqual(decoded, { code: 2, name: "Unauthorized" });
+  });
+
+  it("does not match a similarly-shaped but different error type (e.g. WasmVm)", () => {
+    const error = new Error("Error(WasmVm, #1)");
+    assert.strictEqual(decodeKeeperError(error), undefined);
+  });
 });
 
-test("decodeKeeperError returns undefined for non-contract errors", () => {
-  assert.equal(decodeKeeperError("Network timeout"), undefined);
-  assert.equal(decodeKeeperError("Transaction expired"), undefined);
-  assert.equal(decodeKeeperError(new Error("RPC node unreachable")), undefined);
-  assert.equal(decodeKeeperError(null), undefined);
-  assert.equal(decodeKeeperError(undefined), undefined);
-  assert.equal(decodeKeeperError("Error(Contract, #999)"), undefined); // Out of bounds
+describe("isKeeperError", () => {
+  it("returns true when the error decodes to the exact code checked", () => {
+    const error = new Error("Error(Contract, #4)");
+    assert.strictEqual(isKeeperError(error, KeeperErrorCode.TaskNotFound), true);
+  });
+
+  it("returns false when the error decodes to a different code", () => {
+    const error = new Error("Error(Contract, #2)");
+    assert.strictEqual(isKeeperError(error, KeeperErrorCode.TaskNotFound), false);
+  });
+
+  it("returns false when the error doesn't decode at all", () => {
+    const error = new Error("some unrelated failure");
+    assert.strictEqual(isKeeperError(error, KeeperErrorCode.TaskNotFound), false);
+  });
 });
