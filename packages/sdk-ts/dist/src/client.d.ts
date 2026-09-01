@@ -1,5 +1,5 @@
 import { rpc } from "@stellar/stellar-sdk";
-import { KeeperRegistryClientConfig, BuildTransactionOptions, BuiltTransaction, TransactionResult, TransactionPreviewResult, Task, RegisterTaskParams, BatchRegisterTasksParams, IncreaseRewardParams, ExtendDeadlineParams, ClaimTaskParams, ExecuteTaskParams, CancelTaskParams, ExpireTaskParams, WithdrawRewardsParams, PauseParams, UnpauseParams, SetFeeBpsParams, SetMinRewardParams, TransferAdminParams, UpgradeParams, SweepFeesParams, InitializeParams } from "./types";
+import { KeeperRegistryClientConfig, BuildTransactionOptions, BuiltTransaction, TransactionResult, TransactionPreviewResult, Task, RegisterTaskParams, BatchRegisterTasksParams, IncreaseRewardParams, ExtendDeadlineParams, ClaimTaskParams, ExecuteTaskParams, CancelTaskParams, ExpireTaskParams, WithdrawRewardsParams, PauseParams, UnpauseParams, SetFeeBpsParams, SetMinRewardParams, TransferAdminParams, UpgradeParams, SweepFeesParams, UpdateVerifierParams, InitializeParams } from "./types";
 export declare class KeeperRegistryClient {
     readonly contractId: string;
     readonly rpcUrl: string;
@@ -60,6 +60,7 @@ export declare class KeeperRegistryClient {
     }): Promise<TransactionResult>;
     upgrade(params: UpgradeParams, options?: BuildTransactionOptions): Promise<TransactionResult>;
     sweepFees(params: SweepFeesParams, options?: BuildTransactionOptions): Promise<TransactionResult>;
+    updateVerifier(params: UpdateVerifierParams, options?: BuildTransactionOptions): Promise<TransactionResult>;
     initialize(params: InitializeParams, options?: BuildTransactionOptions): Promise<TransactionResult>;
     private readContract;
     getTask(taskId: bigint | number | string, sourcePublicKey?: string): Promise<Task | null>;

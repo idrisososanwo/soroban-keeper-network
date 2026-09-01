@@ -21,5 +21,6 @@ __exportStar(require("./types"), exports);
 __exportStar(require("./errors"), exports);
 __exportStar(require("./utils"), exports);
 __exportStar(require("./transactionBuilder"), exports);
+__exportStar(require("./methods/updateVerifier"), exports);
 __exportStar(require("./client"), exports);
 //# sourceMappingURL=index.js.map

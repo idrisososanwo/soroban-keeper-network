@@ -186,6 +186,9 @@ class KeeperRegistryClient {
         }
         return this.executeWithSecretKey("sweepFees", params, options);
     }
+    async updateVerifier(params, options) {
+        return this.executeWithSecretKey("updateVerifier", params, options);
+    }
     async initialize(params, options) {
         return this.executeWithSecretKey("initialize", params, options);
     }
