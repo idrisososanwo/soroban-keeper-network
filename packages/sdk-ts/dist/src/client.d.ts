@@ -1,5 +1,5 @@
 import { rpc } from "@stellar/stellar-sdk";
-import { KeeperRegistryClientConfig, BuildTransactionOptions, BuiltTransaction, TransactionResult, Task, RegisterTaskParams, BatchRegisterTasksParams, IncreaseRewardParams, ExtendDeadlineParams, ClaimTaskParams, ExecuteTaskParams, CancelTaskParams, ExpireTaskParams, WithdrawRewardsParams, PauseParams, UnpauseParams, SetFeeBpsParams, SetMinRewardParams, TransferAdminParams, UpgradeParams, SweepFeesParams, InitializeParams } from "./types";
+import { KeeperRegistryClientConfig, BuildTransactionOptions, BuiltTransaction, TransactionResult, TransactionPreviewResult, Task, RegisterTaskParams, BatchRegisterTasksParams, IncreaseRewardParams, ExtendDeadlineParams, ClaimTaskParams, ExecuteTaskParams, CancelTaskParams, ExpireTaskParams, WithdrawRewardsParams, PauseParams, UnpauseParams, SetFeeBpsParams, SetMinRewardParams, TransferAdminParams, UpgradeParams, SweepFeesParams, UpdateVerifierParams, InitializeParams } from "./types";
 export declare class KeeperRegistryClient {
     readonly contractId: string;
     readonly rpcUrl: string;
@@ -17,6 +17,15 @@ export declare class KeeperRegistryClient {
      * @param options Building options (sourcePublicKey, fee, timeoutSeconds)
      */
     buildTransaction(methodName: string, params: Record<string, any>, options?: BuildTransactionOptions): Promise<BuiltTransaction>;
+    /**
+     * Lower-level method: Previews a transaction simulation before submission without requiring any signers or private keys.
+     * Returns resource costs (minResourceFee, cpuInstructions, memoryBytes) and simulated return value (or decoded typed KeeperErrorCode).
+     *
+     * @param methodName Method name to preview (e.g. "registerTask", "claimTask")
+     * @param params Method parameters
+     * @param options Preview options (sourcePublicKey, fee, timeoutSeconds)
+     */
+    previewTransaction(methodName: string, params: Record<string, any>, options?: BuildTransactionOptions): Promise<TransactionPreviewResult>;
     /**
      * Lower-level method: Submits a signed transaction XDR base64 string to the Soroban RPC server
      * and polls until confirmation.
@@ -51,6 +60,7 @@ export declare class KeeperRegistryClient {
     }): Promise<TransactionResult>;
     upgrade(params: UpgradeParams, options?: BuildTransactionOptions): Promise<TransactionResult>;
     sweepFees(params: SweepFeesParams, options?: BuildTransactionOptions): Promise<TransactionResult>;
+    updateVerifier(params: UpdateVerifierParams, options?: BuildTransactionOptions): Promise<TransactionResult>;
     initialize(params: InitializeParams, options?: BuildTransactionOptions): Promise<TransactionResult>;
     private readContract;
     getTask(taskId: bigint | number | string, sourcePublicKey?: string): Promise<Task | null>;
