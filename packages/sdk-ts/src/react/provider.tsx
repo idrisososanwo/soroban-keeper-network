@@ -1,87 +1,30 @@
-import React, { createContext, useContext, useMemo } from "react";
-import { KeeperRegistryClient } from "../client";
+// Minimal provider giving hooks access to a shared `KeeperRegistryClient`
+// instance without each one constructing its own. Scoped to just what
+// `useTask`/`useTaskEvents` need for this epic's assigned issues — the full
+// backlog 0173 (`useKeeperRegistryClient`, peer-dependency split docs) is
+// its own issue; this is deliberately the minimal slice this epic's other
+// hooks can build on without blocking on 0173 landing first.
+
+import { createContext, type ReactNode, useContext } from "react";
+
+import type { KeeperRegistryClient } from "../client";
+
+const KeeperRegistryContext = createContext<KeeperRegistryClient | undefined>(undefined);
 
 export interface KeeperRegistryProviderProps {
-  /**
-   * Optional pre-constructed client instance. If provided, configuration props are ignored.
-   */
-  client?: KeeperRegistryClient;
-
-  /**
-   * Smart contract ID string (C...). Required if `client` is not provided.
-   */
-  contractId?: string;
-
-  /**
-   * Soroban RPC URL. Required if `client` is not provided.
-   */
-  rpcUrl?: string;
-
-  /**
-   * Stellar network passphrase. Required if `client` is not provided.
-   */
-  networkPassphrase?: string;
-
-  /**
-   * Optional secret key (S...) for server/testing environments.
-   */
-  secretKey?: string;
-
-  /**
-   * React children components.
-   */
-  children: React.ReactNode;
+  client: KeeperRegistryClient;
+  children: ReactNode;
 }
 
-const KeeperRegistryContext = createContext<KeeperRegistryClient | null>(null);
+export function KeeperRegistryProvider({ client, children }: KeeperRegistryProviderProps) {
+  return <KeeperRegistryContext.Provider value={client}>{children}</KeeperRegistryContext.Provider>;
+}
 
-/**
- * Context Provider that supplies a shared `KeeperRegistryClient` instance to children React components.
- */
-export const KeeperRegistryProvider: React.FC<KeeperRegistryProviderProps> = ({
-  client,
-  contractId,
-  rpcUrl,
-  networkPassphrase,
-  secretKey,
-  children,
-}) => {
-  const clientInstance = useMemo(() => {
-    if (client) {
-      return client;
-    }
-
-    if (!contractId || !rpcUrl || !networkPassphrase) {
-      throw new Error(
-        "KeeperRegistryProvider requires either a `client` prop or all of (`contractId`, `rpcUrl`, `networkPassphrase`)."
-      );
-    }
-
-    return new KeeperRegistryClient({
-      contractId,
-      rpcUrl,
-      networkPassphrase,
-      secretKey,
-    });
-  }, [client, contractId, rpcUrl, networkPassphrase, secretKey]);
-
-  return (
-    <KeeperRegistryContext.Provider value={clientInstance}>
-      {children}
-    </KeeperRegistryContext.Provider>
-  );
-};
-
-/**
- * Custom hook to retrieve the shared `KeeperRegistryClient` instance from context.
- * Throws a clear, actionable error if called outside `<KeeperRegistryProvider>`.
- */
+/** Throws a clear, actionable error if called outside {@link KeeperRegistryProvider} rather than letting `undefined` propagate silently into a later crash. */
 export function useKeeperRegistryClient(): KeeperRegistryClient {
   const client = useContext(KeeperRegistryContext);
   if (!client) {
-    throw new Error(
-      "useKeeperRegistryClient must be used within a <KeeperRegistryProvider>."
-    );
+    throw new Error("useKeeperRegistryClient() must be called within a <KeeperRegistryProvider>.");
   }
   return client;
 }
